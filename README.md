@@ -2,7 +2,8 @@
 
 I wrote `boundalyzer` as a GUI for creating and analyzing Black Box Specifications as described in the book
 [Cleanroom Software Engineering: Technology and Process](https://www.amazon.com/Cleanroom-Software-Engineering-Technology-Process/dp/B000REU39C/ref=sr_1_1?crid=34RP6LQST41QO&keywords=cleanroom+software+engineering+technology+and+process&qid=1662346689&s=books&sprefix=cleanroom+software+engineering+technology+and+process%2Cstripbooks%2C124&sr=1-1).
-This software represents my own interpretation of the Black Box concept described in that book.
+This software represents my own interpretation of the Black Box concept described in that book, discussed in detail in my
+[2009 paper](blackboxpaper.pdf) in the Journal of Computing Sciences in Colleges.
 
 Each Black Box specification is a model of the interactions between a software artifact and its environment. Each 
 input the artifact receives from its environment is a "stimulus", and the artifact gives "responses" to the environment.
