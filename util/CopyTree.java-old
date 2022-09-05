@@ -1,0 +1,287 @@
+// Uses the Andersson algorithm
+// _Persistent_ balanced binary trees; changes to the tree are not visible to 
+// other references.  All trees share common contents.
+//
+// Set operations (union, intersection) are also included.
+//
+// This is useful for keeping maps of variables in scope.
+// As we process source code in a linear ordering, upon entering
+// curly braces the new variables introduced will later go out of
+// scope.  This class will let us "revert" by holding on to a 
+// reference prior to reaching the curly braces.
+
+// What would be ideal would be to create SharedSet and SharedMap interfaces,
+// which TreeSharedSet and TreeSharedMap would implement.  This would be more
+// consonant with the way that the Collections library works.
+
+package util;
+import java.util.*;
+
+public class CopyTree<K extends Comparable<K>,V> implements Iterable<Pair<K,V>> {
+    private K key;
+    private V value;
+    private CopyTree<K,V> left, right;
+    private int level;
+    
+    public CopyTree() {
+        this(null, null, null, null);
+    }
+    
+    public boolean isEmpty() {return key == null;}
+    
+    public K getKey() {return key;}
+    public V getValue() {return value;}
+    public Pair<K,V> getPair() {return new Pair<K,V>(key, value);}
+    
+    public V find(K target) {
+        if (isEmpty()) {return null;}
+        
+        int compare = target.compareTo(getKey());
+        if (compare == 0) {
+            return getValue();
+        } else if (compare > 0) {
+            return right.find(target);
+        } else {
+            return left.find(target);
+        }
+    }
+    
+    public boolean hasKey(K key) {return find(key) != null;}
+    
+    public CopyTree<K,V> insert(K target, V val) {
+        if (this.isEmpty()) {
+            return new CopyTree<K,V>(target, val, this, this);
+        }
+        
+        CopyTree<K,V> result;
+        int compare = target.compareTo(this.getKey());
+        if (compare == 0) {
+            result = new CopyTree<K,V>(target, val, left, right);
+        } else if (compare > 0) {
+            result = new CopyTree<K,V>(this, left, right.insert(target, val));
+        } else {
+            result = new CopyTree<K,V>(this, left.insert(target, val), right);
+        }
+        return result.rebalanced();
+    }
+    
+    public CopyTree<K,V> remove(K target) {
+        if (isEmpty()) {return this;}
+        
+        CopyTree<K,V> result = null;
+        int compare = target.compareTo(getKey());
+        if (compare == 0) {
+            if (left.isEmpty()) {
+                result = right;
+            } else {
+                Pair<K,V> content = left.getMaxPair();
+                result = new CopyTree<K,V>(content.a, content.b, left.maxRemoved(), right);
+            }
+        } else {
+            if (compare > 0) {
+                result = new CopyTree<K,V>(this, left, right.remove(target));
+            } else {
+                result = new CopyTree<K,V>(this, left.remove(target), right);
+            }
+        }
+        return result.rebalanced();
+    }
+    
+    public CopyTree<K,V> union(CopyTree<K,V> other) {
+        CopyTree<K,V> onion = this;
+        for (Pair<K,V> p: other) {onion = onion.insert(p.a, p.b);}
+        return onion;
+    }
+    
+    public CopyTree<K,V> intersection(CopyTree<K,V> other) {
+        CopyTree<K,V> inter = new CopyTree<K,V>();
+        for (Pair<K,V> p: this) {
+            if (other.hasKey(p.a)) {inter = inter.insert(p.a, p.b);}
+        }
+        return inter;
+    }
+    
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        appendSelf(sb, 0);
+        return sb.toString();
+    }
+    
+    public String inOrder() {
+        StringBuilder sb = new StringBuilder();
+        buildInOrder(sb);
+        return sb.toString();
+    }
+    
+    public Iterator<Pair<K,V>> iterator() {return new SelfIter(this);}
+    
+    // Private methods
+    
+    private CopyTree(K k, V v, CopyTree<K,V> left, CopyTree<K,V> right) {
+        key = k;
+        value = v;
+        this.left = left;
+        this.right = right;
+        if (left == null) {
+            level = 0;
+        } else {
+            level = computeLevel();
+        }
+    }
+    
+    private CopyTree(CopyTree<K,V> src) {
+        this(src, src.left, src.right);
+    }
+    
+    private CopyTree(CopyTree<K,V> src, CopyTree<K,V> left, CopyTree<K,V> right) {
+        this(src.key, src.value, left, right);
+        level = src.level;
+    }
+    
+    private CopyTree<K,V> rebalanced() {
+        CopyTree<K,V> result = this;
+        result = result.gapsFixed();
+        result = result.enforceLeftRule();
+        result = result.enforceRightRule();
+        return result;
+    }
+
+    private int computeLevel() {
+        return isEmpty() ? 0 : left.level + 1;
+    }
+    
+    private CopyTree<K,V> enforceLeftRule() {
+        if (!isEmpty() && level != computeLevel()) {
+            if (left.level == right.level) {
+                return new CopyTree<K,V>(this);
+            } else {
+                CopyTree<K,V> newThis = new CopyTree<K,V>(this, this.left.right, this.right);
+                newThis.level = newThis.computeLevel();
+                CopyTree<K,V> newParent = new CopyTree<K,V>(this.left, this.left.left, newThis.enforceLeftRule());
+                return newParent;
+            }
+        } else {
+            return this;
+        }
+    }
+    
+    private CopyTree<K,V> enforceRightRule() {
+        if (!isEmpty() && !right.isEmpty() && !right.right.isEmpty() && right.right.level == level) {
+            CopyTree<K,V> newThis = new CopyTree<K,V>(this, this.left, this.right.left.enforceRightRule());
+            CopyTree<K,V> newParent = new CopyTree<K,V>(this.right, newThis, this.right.right);
+            newParent.level = newParent.computeLevel();
+            return newParent;
+        } else {
+            return this;
+        }
+    }
+    
+    private CopyTree<K,V> gapsFixed() {
+        if (!isEmpty() && (level > left.level + 1 || level > right.level + 1)) {
+            CopyTree<K,V> newThis = new CopyTree<K,V>(this);
+            newThis.level = this.level - 1;
+            if (newThis.right.level > newThis.level) {
+                CopyTree<K,V> newRight = new CopyTree<K,V>(right);
+                newRight.level = newThis.level;
+            }
+            return newThis;
+        } else {
+            return this;
+        }
+    }
+    
+    private Pair<K,V> getMaxPair() {
+        return right.isEmpty() ? getPair() : right.getMaxPair();
+    }
+    
+    private CopyTree<K,V> maxRemoved() {
+        if (right.isEmpty()) {
+            return left.isEmpty() ? right : left;
+        } else {
+            return new CopyTree<K,V>(this, left, right.maxRemoved()).rebalanced();
+        }
+    }
+    
+    private void appendSelf(StringBuilder sb, int numTabs) {
+        appendTabs(numTabs, sb);
+        
+        if (isEmpty()) {
+            sb.append("[sentinel]\n");
+        } else {
+            sb.append(getPair() + "(" + level + ")\n");
+            left.appendSelf(sb, numTabs + 1);
+            right.appendSelf(sb, numTabs + 1);
+        }
+    }
+    
+    private void appendTabs(int numTabs, StringBuilder sb) {
+        for (int i = 0; i < numTabs; ++i) {sb.append('\t');}
+    }
+    
+    private void buildInOrder(StringBuilder sb) {
+        if (!isEmpty()) {
+            left.buildInOrder(sb);
+            sb.append("[");
+            sb.append(getKey().toString());
+            sb.append(",");
+            sb.append(getValue().toString());
+            sb.append("] ");
+            right.buildInOrder(sb);
+        }
+    }
+    
+    private class SelfIter implements Iterator<Pair<K,V>> {
+        private LinkedList<CopyTree<K,V>> next;
+        private CopyTree<K,V> where;
+        
+        public SelfIter(CopyTree<K,V> start) {
+            next = new LinkedList<CopyTree<K,V>>();
+            where = findNext(start);
+        }
+        
+        private CopyTree<K,V> findNext(CopyTree<K,V> start) {
+            if (start.isEmpty() || start.left.isEmpty()) {
+                return start;
+            } else {
+                next.addLast(start);
+                return findNext(start.left);
+            }
+        }
+        
+        public boolean hasNext() {return !where.isEmpty();}
+        
+        public Pair<K,V> next() {
+            Pair<K,V> result = where.getPair();
+            if (where.right.isEmpty()) {
+                where = (next.size() == 0) ? where.right : next.removeLast();
+            } else {
+                where = findNext(where.right);
+            }
+            return result;
+        }
+        
+        public void remove() {throw new UnsupportedOperationException();}
+    }
+    
+    public static void main(String[] args) {
+        CopyTree<String,String> root = new CopyTree<String,String>();
+        for (int i = 0; i < args.length; i+=2) {
+            root = root.insert(args[i], args[i+1]);
+        }
+        
+        System.out.println("Tree:");
+        System.out.println(root);
+        
+        System.out.println("In ascending order:");
+        for (Pair<String,String> node: root) {
+            System.out.print(node + " ");
+        }
+        System.out.println();
+        
+        for (int i = 0; i < args.length; i+=2) {
+            root = root.remove(args[i]);
+            System.out.println("Tree:");
+            System.out.println(root);
+        }
+    }
+}

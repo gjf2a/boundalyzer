@@ -1,0 +1,157 @@
+package squirrel;
+import java.util.*;
+
+public class ResultTable {
+    private Map<String,TreeData[]> table;
+    private Input input;
+    private String startSymbol;
+    
+    /*[getInput(), treeStoredFor(nonterm, inputStart) := in, false]*/
+    public ResultTable(Input in, String startSymbol) {
+        input = in;
+        table = new HashMap<String,TreeData[]>();
+        this.startSymbol = startSymbol;
+    }
+    
+    /*[treeStoredFor(nonterm, inputStart) => return := treeFor(nonterm, inputStart)
+      | hasErrors(nonterm, inputStart) => return := errorFor(nonterm, inputStart)
+      | true => return := null]*/
+    public Tree getTree(String nonterm, int inputStart) {
+        ensureNonTermRow(nonterm);
+        if (inputStart > maxInputStart()) {
+            return null;
+        }
+        ensureTreeData(nonterm, inputStart);
+        return table.get(nonterm)[inputStart].result();
+    }
+    
+    public boolean hasErrors(String nonterm, int inputStart) {
+        return table.get(nonterm) != null 
+            && inputStart <= maxInputStart() 
+            && table.get(nonterm)[inputStart] != null 
+            && table.get(nonterm)[inputStart].hasErrors();
+    }
+    
+    public boolean hasOnlyErrors(String nonterm, int inputStart) {
+        return hasErrors(nonterm, inputStart) && !treeStoredFor(nonterm, inputStart);
+    }
+    
+    public int numErrors(String nonterm, int inputStart) {
+        return table.get(nonterm)[inputStart].numErrors();
+    }
+    
+    public Tree nthError(String nonterm, int inputStart, int n) {
+        return table.get(nonterm)[inputStart].nthError(n);
+    }
+    
+    public Tree bestError(String nonterm, int inputStart) {
+        return table.get(nonterm)[inputStart].bestError();
+    }
+    
+    // Returns true if there is a non-error tree stored at (nonterm, inputStart)
+    public boolean treeStoredFor(String nonterm, int inputStart) {
+        return table.get(nonterm) != null 
+            && table.get(nonterm)[inputStart] != null 
+            && inputStart <= maxInputStart() 
+            && table.get(nonterm)[inputStart].hasSuccess();
+    }
+    
+    public int maxInputStart() {return input.length();}
+    
+    private void ensureNonTermRow(String nonterm) {
+        if (table.get(nonterm) == null) {
+            table.put(nonterm, new TreeData[maxInputStart() + 1]);
+        }
+    }
+    
+    private void ensureTreeData(String symbol, int inputStart) {
+        if (table.get(symbol)[inputStart] == null) {
+            table.get(symbol)[inputStart] = new TreeData();
+        }
+    }
+    
+    /*[treeStoredFor(symbol, inputStart) => throws := exception
+    | true => bestError(), treeStoredFor(symbol, inputStart), getTree(symbol, inputStart) := tree if tree.isError() and tree.matchesMoreThan(getBestError()), true, tree]*/ 
+    public void addTree(String symbol, int inputStart, Tree tree) {
+        ensureNonTermRow(symbol);
+        
+        if (treeStoredFor(symbol, inputStart)) {
+            System.out.println("Failing to add \"" + tree + "\"");
+            throw new IllegalStateException("Precondition violated for ResultTable.addTree(): symbol is " + symbol + "; tree.start() = " + tree.start());
+        }
+        
+        ensureTreeData(symbol, inputStart);
+        table.get(symbol)[inputStart].add(tree);
+    }
+    
+    /*[parse error => return := parse error at maximum distance from start
+      | true => return := tree matching entire input]*/
+    public Tree bestTree() {
+        if (getInput().length() < 1) {
+            return new Error(startSymbol, input, 0, 0, "Empty input");
+        } else {
+            return getTree(startSymbol, 0);
+        }
+    }
+    
+    public Input getInput() {return input;}
+    
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (String nonterm: table.keySet()) {
+            sb.append("Nonterminal ");
+            sb.append(nonterm);
+            sb.append(":");
+            for (int i = 0; i < table.get(nonterm).length; ++i) {
+                TreeData td = table.get(nonterm)[i];
+                if (td != null && td.hasResult()) {
+                    sb.append(i);
+                    sb.append(": ");
+                    sb.append(td.result().textTree());
+                }
+            }
+            sb.append('\n');
+        }
+        return sb.toString();
+    }
+    
+    private class TreeData {
+        private Tree result, bestError;
+        private ArrayList<Tree> errors;
+        
+        public TreeData() {
+            result = bestError = null;
+            errors = new ArrayList<Tree>();
+        }
+        
+        public Tree result() {return result;}
+        
+        public boolean hasResult() {return result != null;}
+        
+        public boolean hasSuccess() {return hasResult() && !result.isError();}
+        
+        public boolean hasErrors() {return errors.size() > 0;}
+        
+        public int numErrors() {return errors.size();}
+        
+        public Tree nthError(int n) {return errors.get(n);}
+        
+        public Tree bestError() {return bestError;}
+        
+        public void add(Tree t) {
+            if (hasSuccess()) {
+                throw new IllegalStateException("Tree has already been stored");
+            }
+            
+            if (t.isError()) {
+                if (!hasResult() || t.end() >= result.end()) {
+                    result = t;
+                    bestError = t;
+                }
+                errors.add(t);
+            } else {
+                result = t;
+            }
+        }
+    }
+}

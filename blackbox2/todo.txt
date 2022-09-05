@@ -1,0 +1,41 @@
+Grand Plan for blackbox2:
+------------------------
+
+The black box editor will be itself modeled by a black box and state box.  
+To this end, there will be a central data structure (BlackBoxApp) that will be 
+directly modeled and whose methods will have side effects.  
+
+Other than this central data structure and the thread-searchers, all other data 
+structures will be immutable.  Several new data structures (FuncArray,
+SharedSet, SharedMap) will facilitate this.
+
+The overhauled black box will have several new features:
+- A row can contain multiple responses.
+- A non-YAML file format will be introduced. (DONE)
+- A row can be triggered by multiple stimuli.
+- The "impossible" response will always be present.  No StimulusSeq will
+  ever reference a row containing this response.  
+
+Future research:
+- Instead of separating out the state box, integrate it into the same file
+  and editor application.  Use JML for the old-state and new-state specs.
+  Allow the user to select a programming language from the "inventory" for the
+  expression syntax.  Support Scheme as a way to demonstrate this.
+- Investigate memoization to improve the search:
+  - Instrument the search for a number of test examples to see whether and
+    how often a subsequence gets generated during multiple branches of a
+    breadth-first search.
+  - If it would be helpful to do so, based on this data, create a memoization
+    table based on these results.
+  - Perhaps the search can be pruned whenever a pattern of unestablished rows is
+    repeated.  This might not go well with multiple versions of searching for a
+    "count" argument.
+  - An "or" could be dealt with by adding two nodes to the search, one for
+    each alterative.  This might be better than the inefficient combined
+    preference lists that are currently produced.  (Or would it be totally 
+    equivalent?)
+- Concurrency:
+  - Model each concurrent thread as a black box.
+  - Allow multiple black boxes to communicate.
+  - Create a model checker that runs multiple black boxes and checks 
+    various safety properties.

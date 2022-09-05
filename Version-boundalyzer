@@ -1,0 +1,196 @@
+Boundalyzer version 2.07
+
+Changes since 2.07
+- Macro renaming/deletion works
+- User interface cleanup begun
+
+Changes since 2.06
+- Relaxed existence check for names
+  - Still flags trouble if stimuli and macros share a name
+
+Changes since 2.05
+- Fixed bug in ResponseEstimates
+- Added back-up feature for the Animation panel
+- Fixed bug in StimulusSeq constructor
+- Added renaming of stimuli and responses
+- Renaming/deleting of macros is still buggy
+- Added existence check for names
+
+Changes since 2.04
+- AnimationPanel shows a listing of current macros and true/false values
+- JSplitPane used for dividing the main work area
+- A stimulus not explicitly referenced can now be deleted
+- A default black box row is given to the user automatically
+- Deletion exceptions for stimuli and responses are now caught and reported
+- Improved messages from search algorithm
+
+Changes since 2.03
+- AnimationPanel uses GridLayout to alleviate scrolling issues
+- AnimationPanel refreshes properly after black box changes
+- Minor bug fixed with Undo and file-changed indicator
+- Adding a row with a blank stimulus adds "all"
+- Adding a row with a blank response adds "None"
+- Most (hopefully all!) runtime exceptions are caught and reported to the user
+- Any file that saved zero-length names for stimuli and responses are filtered
+
+Changes since 2.02
+- Warns user when closing if unsaved files are present
+- Animation tabs can now be deleted
+- Fixed bug in ResponseEstimates.java
+  - Some response estimates are Integer.MAX_VALUE; adding 1 to this is
+    not good.  Fix: Now checks for this explicitly.
+- Added row deletion to the row editor
+- Replaces all spaces in stimulus/response/macro names with underscore characters
+- Removed JOptionPane calls from the macro editor
+
+Changes since 2.01
+- Fixed NullPointerException when deleting responses not present in a row
+- Fixed underestimation bug with "any:response X" in comparison with 
+  "includes response X"
+- Fixed "tunneling" problem with the "response" keyword
+- Fixed non-monotonicity problems with SequenceHistory and CompareHistory
+- Greatly improved heuristic estimator to "response"
+- Added a split-screen in which the black box is always visible
+  while an editing panel is below it, would be much easier to use.
+- When clicking on a row, the appropriate Row Editor field is brought up.
+- A generated animation should now regenerate after the black box changes
+  - This has not yet been tested.
+- Messages from search algorithms in the message window have clearer labels
+
+Known bugs:
+- RobotClear3.bbx includes a row (row 9) that the consistency checker cannot
+  verify after 4500 node expansions.
+- (GUI) It would be good for the table to try to minimize the amount of text
+  spilled horizontally, at the expense of spilling text vertically.
+- WanderRobot3.bbx does not pass a completeness or independence check
+  - If the macro "Spinning" were to be expanded and used, it probably
+    would pass
+  - Spinning contains an "or" which is ignored (I think) because macros 
+    are automatically considered atoms instead of being dereferenced
+- When dependent rows are detected, display the numbers of the conflicting rows
+  instead of just the dependent stimulus
+- WanderRobot2.bbx shows two problems:
+  - Completeness check gives impossible sequences as examples!
+  - Independence check does not terminate
+  - WanderRobot3.bbx is a slightly different version that shows related
+    problems.
+- "Changing" a response adds a new response, and doesn't change anything
+  - "Changing" is only intended to _change a definition_
+  - There might need to be an additional "rename" option that would also refresh
+    the current black box
+  - Even changing a definition fails if the response is currently in-use in 
+    the table, since a change is a delete followed by an add.
+- Does not ensure that all Responses are present in the table
+- Trying to Add a Response that is already in place causes an exception
+- Got the following exception when deleting the last remaining response in a row:
+  Exception in thread "AWT-EventQueue-0" java.lang.StringIndexOutOfBoundsException: String index out of range: -1
+	at java.lang.AbstractStringBuilder.delete(AbstractStringBuilder.java:701)
+	at java.lang.StringBuilder.delete(StringBuilder.java:256)
+	at blackbox2.Responses.toString(Responses.java:58)
+- Excessive underestimation of canForward from Browser.bbx.  The current
+  version searches fewer nodes than any previous version, which is great,
+  but some of the estimates still seem like they could be more precise.
+- Macros cannot be deleted or renamed
+- When a macro is added, it is _not_ the selected item in the JComboBox
+  - Instead, the previously selected macro remains
+  - This is really annoying
+- The following expression parses:
+  (count leftMove = count rightMove) and count Char > count response DeleteBehind
+  - However, this expression does not parse:
+  count leftMove = count rightMove and count Char > count response DeleteBehind
+- Switching tabs removes uncommitted edits to macros
+- If a stimulus or response is deleted and is present in a table row,
+  it throws an uncaught exception
+- Undo/redo need shortcut keys
+- Undo/redo need to be disabled when impossible
+- Loading seems slow
+- JComboBox listing macros lists some macros redundantly when first clicked;
+  once a macro is selected, it works fine
+  
+Changes since 2.0
+- When rows are inserted or row stimuli are modified, the black box rows 
+  are no longer organized using the stimuli as a key.  This hopefully
+  ameliorates significant confusion that the automated organization scheme
+  could induce.
+
+Changes since 1.15
+- Complete overhaul of source code
+- Tabbed GUI
+- Multiple stimuli/responses in a row
+
+Changes since 1.14
+- Bug fix in sat.Or
+- Massive overhaul of BackSearcher.java and all of the children of History.java
+  - Fixes some major bugs in sequence generation
+- Bug fix: Editing a response works now
+
+Changes since 1.13
+- "Clear All Rows" button is gone
+- Clicking "X" gets intercepted
+
+Changes since 1.12
+- Tied together the close buttom and the Exit menu option
+
+Changes since 1.11
+- Fixed up findError() (very buggy previously)
+- Impossible histories that are edited into error will now keep the original
+  non-error history
+- Stimuli used _only_ in impossible histories may no longer be deleted
+
+Changes since 1.10
+- Fixed bug with "only":
+  - NullPointerException got thrown when analyzing histories using "only"
+  - This was a general failure to assign a BlackBox to a History when the
+    History was generated outside HistoryParser
+  - The entire class hierarchy was restructured to prevent this from ever
+    happening, by requiring every History to have a BlackBox via the
+    constructor
+- Fixed error messages
+  - Previously, error messages could be "embedded" in a History
+  - They are now extracted
+
+Changes since 1.09
+- Added "only" and "oneof" keywords
+- Fixed "embedded error message in table" bug
+- Fixed Macro generator bug:
+  - When generating, the generator always starts with the same sequence 
+    every time the button is clicked
+
+Changes since 1.08
+- Bug fixed in BackSearcher.java
+
+Changes since 1.07:
+- When a stimulus or response is renamed, the renaming now gets propagated
+  through all of the history set specifications.  Previously, this did not 
+  happen, rendering some of these specifications illegal due to the presence
+  of the old name.
+- The completeness checker did not take "impossible" sequences into account.
+  This has been fixed.
+- The generator generated all _legal_ sequences it found, regardless of whether
+  they matched the target history.  This has now been fixed by adding a call
+  to matches() before adding a sequence to the generated list.
+  
+Changes since 1.06:
+- ConcurrentModificationException in CompareHistory fixed
+- Macro editor closes when a change is registered
+
+Changes since 1.05:
+- Disabled "redo" menu item; it is buggy and needs some attention
+- The stimulus/response editor
+  - Closes automatically when changes are made
+  - Restores name and description when erroneous values are entered
+- The completeness checker:
+  - Major bug fix in StimulusSeq.isValidUsing()
+  - Sequences ending in a row outside the black box are still technically
+    valid; this has been changed to require a legal row number
+- Editing while searching:
+  - Previously, if a black box is edited while a search is in progress, 
+    the search may crash and prevent further searches from being launched
+  - Now, an edit to a black box while a search is in progress terminates
+    the search
+
+Changes since 1.0:
+- Fixed bug in BackMoves by adding "strongly preferred" stimuli
+- Changed all fonts to courier for user-entered information
+- Got rid of debugging output
+- Fixed up the help options a bit

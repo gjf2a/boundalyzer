@@ -1,0 +1,67 @@
+Squirrel parser generator, version 1.1.
+- Last revised: February 9, 2009
+
+The squirrel parser generator is a Java class library that enables a programmer
+to embed a parser generator in an application.  When the program first starts,
+the parser is generated.  The generator can then be used at will.
+
+To use the squirrel library, move the jar file to the directory in which your
+source code is located and type the following:
+
+jar xvf squirrel.jar
+
+The library is now in the squirrel/ subdirectory.  Each class in the library
+is part of the squirrel package.  The grammars/ subdirectory contains some
+example grammars.
+
+To build a parser, do the following:
+- Create a Grammar object
+- The rule <any> is always included; it matches any single character
+- The method importStandard() will include the following rules:
+  - <upper> ::= letters from 'A' to 'Z'
+  - <lower> ::= letters from 'a' to 'z'
+  - <alpha> ::= <upper> | <lower>
+  - <digit> ::= numbers from '0' to '9'
+  - <alphanumeric> ::= <alpha> | <digit>
+  - <space> ::= ' ' | '\n' | '\t'
+  - <sp> ::= <space> [<sp>]
+- Add productions using the following methods from the Grammar class:
+  - addRule(leftSide, rightSides...) will add a rule that matches the leftSide
+    if any of the rightSides match; use one string for each rightSide.  A parse
+    tree with a root node with the label from leftSide will be generated.
+  - addToken(leftSide, rightSides...) is similar to addRule(), except that
+    instead of generating a parse tree, a single leaf is generated instead
+    containing the entire matched input.
+  - addCharRange(leftSide, startChar, endChar) matches any character in the
+    specified inclusive range.
+  - addCharClass(leftSide, char1...) matches any character in the list on the 
+    right-hand side
+- Most right-hand sides will match literally.  The following special characters 
+  are in effect:
+  - Angle brackets (<>) surrounding a string indicate that it is a nonterminal
+    symbol; all left-hand sides should be in angle brackets
+  - Square brackets ([]) indicate an optional symbol.  If it is not matched, a 
+    zero-length leaf node is introduced.
+  - The exclamation point (!) indicates an exclusive lookahead symbol; if the
+    symbol is NOT matched, the symbol accepts.  No input is consumed.
+  - The ampersand (&) indicates an inclusive lookahead symbol.  Again, no 
+    input is consumed.  
+    
+To parse an input string, do the following:
+- Create a Parser object, with your grammar and your input string as parameters
+- Call bestTree() to get the parse tree
+
+To parse an input file, pass a File object instead of a String to the Parser
+constructor.
+
+In either case, you can control and inspect the parsing algorithm in a 
+fine-grained way by using the parseNext(), isComplete(), and top() methods from 
+the Parser class.  You can access the dynamic programming table by inspecting 
+the ResultTable object returned by the results() method.  You should not modify 
+the table yourself; let the Parser do that for you.
+
+The HasGrammar interface can be implemented by any class for which you want
+to make its Grammar object publicly visible.  This can be useful for debugging
+(or creating a debugger).  
+
+The grammars package contains some examples.
